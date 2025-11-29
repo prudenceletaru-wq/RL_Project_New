@@ -31,4 +31,4 @@ COPY . /app
 EXPOSE 8000
 
 # 9. Running FastAPI with live reload
-CMD ["uvicorn", "API.serve_api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "API.serve_api:app", "--host", "0.0.0.0", "--port", "8000"]
