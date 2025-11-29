@@ -7,27 +7,27 @@ The project includes training, inference, and deployment via a FastAPI endpoint.
 
 ---
 
+
 ## Project Structure
 
-RL_Hospital_Project/
+RL_Project_New/   <-- root directory
 │
-├── env/ # Custom environment code
-│ └── hospital_env.py
+├── env/           # Custom environment code
+│   └── hospital_env.py
 │
-├── models/ # Saved RL models
-│ └── dqn_hospital_sb3
+├── models/        # Saved RL model
+│   └── dqn_hospital_sb3
 │
-├── training/ # RL training scripts
-│ └── train_dqn.py
+├── training/      # RL training and evaluation scripts
+│   └── train_dqn.py
 │
-├── API / # API Inference code
-│ └── serve_api.py
+├── API/           # API Inference code
+│   └── serve_api.py
 │
-├── requirements.txt # Python dependencies with versions
-└── README.md # This file
+├── requirements.txt  # Python dependencies with versions
+├── Dockerfile        # Dockerfile for building container
+└── README.md         # Project description
 
-
----
 
 ## Installation
 
