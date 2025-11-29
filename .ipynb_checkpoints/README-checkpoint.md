@@ -29,34 +29,42 @@ RL_Project_New/   <-- root directory
 
 ## Installation
 
-1. **Clone the repository**:
+**Clone the repository**:
 
 git clone https://github.com/prudenceletaru-wq/RL_Project_New
 cd RL_Project_New
 
-* Create and activate a Conda environment *:
+* Create and activate a Conda environment:
 
 conda create -n rl_env python=3.12
+
 conda activate rl_env
 
-* Install required packages *:
+* Install required packages:
+  
 pip install -r requirements.txt
 
-* Training the RL Agent *
+* Training the RL Agent
 
 Run the training script to train the DQN agent:
+
 python training/train_dqn.py
+
 The trained model will be saved in the models/ folder.
 
-* Running the API Locally *
+* Running the API Locally
 
 Start the FastAPI server to serve the trained model:
+
 python API/serve_api.py
+
 Default URL: http://127.0.0.1:8000
+
 API endpoint: /predict
+
 Input: Dictionary of current hospital state
 
-* Example Request (Python)*:
+* Example Request (Python):
 
 import requests
 
@@ -76,6 +84,7 @@ response = requests.post(
     json={"state": state_dict}
 )
 
+
 print(response.json())
 
 Example Response:
@@ -86,17 +95,21 @@ Example Response:
 }
 
 Action values:
+
 0 → Serve Red patient
+
 1 → Serve Yellow patient
 
-* Web-based Testing *
+* Web-based Testing 
 
 Deployed on Render. Open the interactive API docs:
 
 https://rl-hospital-api.onrender.com/docs
 
 Click on /predict
+
 Click Try it out
+
 Enter a JSON dictionary for state (like the example below):
 
 {
@@ -114,17 +127,23 @@ Enter a JSON dictionary for state (like the example below):
 
 Click Execute to see the predicted action.
 
-* Deployment *
+* Deployment
 
 This project uses Docker for deployment.
+
 Dockerfile is included in the root directory.
+
 To deploy on Render:
+
 Push the repo to GitHub
+
 Connect the repo to Render
+
 Configure as a Docker Web Service
+
 Render automatically builds and deploys the container
 
-* Dependencies *
+* Dependencies
 
 Key libraries (also listed in requirements.txt):
 
