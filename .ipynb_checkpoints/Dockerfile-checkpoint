@@ -1,33 +1,34 @@
 # 1. Base image
 FROM python:3.12-slim
 
-# 2. Install system dependencies (IMPORTANT for SB3)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    swig \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# 3. Set working directory
+# 2. Setting working directory
 WORKDIR /app
 
-# 4. Copy project files
-COPY . /app
+# 3. Installing system dependencies (git, curl, build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    build-essential \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 5. Install PyTorch CPU
-RUN pip install --no-cache-dir \
+# 4. Copying requirements.txt first to leverage caching
+COPY requirements.txt /app/
+
+# 5. Installing CPU-only PyTorch first (big package, long timeout)
+RUN pip install --no-cache-dir --default-timeout=500 \
     torch==2.9.1+cpu \
-    torchvision==0.24.1+cpu \
     torchaudio==2.9.1+cpu \
+    torchvision==0.24.1+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
-# 6. Install remaining dependencies
-RUN pip install --no-cache-dir -r requirements.txt --timeout=360
+# 6. Installing the rest of dependencies (no --no-deps)
+RUN pip install --no-cache-dir --default-timeout=500 -r requirements.txt
 
-# 7. Install uvicorn standard extras (includes click)
-RUN pip install --no-cache-dir uvicorn[standard]
+# 7. Copying the rest of the project files (source code)
+COPY . /app
 
-# 8. Expose port
+# 8. Exposing FastAPI port
 EXPOSE 8000
 
-# 9. Run FastAPI
+# 9. Running FastAPI with live reload
 CMD ["uvicorn", "API.serve_api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

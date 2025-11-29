@@ -10,36 +10,30 @@ class HospitalEnv(gym.Env):
 
         self.max_steps = max_steps  # maximum steps per episode
 
-        # Observation space: 10 features
-        self.observation_space = spaces.Box(low=0, high=200, shape=(10,), dtype=np.float32)
-        self.action_space = spaces.Discrete(3)  # RED=0, YELLOW=1, GREEN=2
+        # Observation space: 8 features (free doctors + red/yellow queues + doctor timers)
+        self.observation_space = spaces.Box(low=0, high=200, shape=(8,), dtype=np.float32)
+        self.action_space = spaces.Discrete(2)  # 0=RED, 1=YELLOW
 
-        # Doctors
+        # Number of doctors and service times
         self.num_doctors = 3
         self.doctor_timers = np.zeros(self.num_doctors)
 
         # Queues
         self.red_queue = []
         self.yellow_queue = []
-        self.green_queue = []
 
-        # Arrival tracking
-        self.arrival_caps = {"red": 3, "yellow": 4, "green": 4}
-        self.arrivals_done = {"red": 0, "yellow": 0, "green": 0}
+        # Arrival tracking (Poisson lambda)
+        self.arrival_lam = {"red": 0.5, "yellow": 1}
 
         # Service times (lognormal)
         self.red_mu, self.red_sigma = self._lognormal(15, 5)
         self.yellow_mu, self.yellow_sigma = self._lognormal(10, 2)
-        self.green_mu, self.green_sigma = self._lognormal(10, 2)
 
         # Step counter
         self.current_step = 0
 
-        # Track last 5 actions for GREEN reward
-        self.last_5_actions = []
-
-        # Track last served wait times per category
-        self.last_served_wait_times = {"red": 0, "yellow": 0, "green": 0}
+        # Last served wait times per category
+        self.last_served_wait_times = {"red": 0, "yellow": 0}
 
     # -------------------------------------------
     # Lognormal conversion
@@ -51,18 +45,15 @@ class HospitalEnv(gym.Env):
         return mu, sigma
 
     # -------------------------------------------
-    # Reset environment
+    # Resetting environment
     # -------------------------------------------
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.red_queue = []
         self.yellow_queue = []
-        self.green_queue = []
-        self.arrivals_done = {"red": 0, "yellow": 0, "green": 0}
         self.doctor_timers[:] = 0
         self.current_step = 0
-        self.last_5_actions = []
-        self.last_served_wait_times = {"red": 0, "yellow": 0, "green": 0}
+        self.last_served_wait_times = {"red": 0, "yellow": 0}
         obs = self._get_obs()
         return obs, {}
 
@@ -71,16 +62,14 @@ class HospitalEnv(gym.Env):
     # -------------------------------------------
     def _get_obs(self):
         return np.array([
-            np.sum(self.doctor_timers == 0),  # number of free doctors
-            max(self.red_queue) if self.red_queue else 0,  # longest wait in red
+            np.sum(self.doctor_timers == 0),         # number of free doctors
+            max(self.red_queue) if self.red_queue else 0,   # longest wait in red
             max(self.yellow_queue) if self.yellow_queue else 0,  # longest wait in yellow
-            max(self.green_queue) if self.green_queue else 0,  # longest wait in green
-            len(self.red_queue),  # red queue length
-            len(self.yellow_queue),  # yellow queue length
-            len(self.green_queue),  # green queue length
-            self.doctor_timers[0],  # doctor 1 busy time left
-            self.doctor_timers[1],  # doctor 2 busy time left
-            self.doctor_timers[2],  # doctor 3 busy time left
+            len(self.red_queue),                      # red queue length
+            len(self.yellow_queue),                   # yellow queue length
+            self.doctor_timers[0],                    # doctor 1 busy time left
+            self.doctor_timers[1],                    # doctor 2 busy time left
+            self.doctor_timers[2],                    # doctor 3 busy time left
         ], dtype=np.float32)
 
     # -------------------------------------------
@@ -89,27 +78,22 @@ class HospitalEnv(gym.Env):
     def _sample_service(self, action):
         if action == 0:
             return np.random.lognormal(self.red_mu, self.red_sigma)
-        elif action == 1:
-            return np.random.lognormal(self.yellow_mu, self.yellow_sigma)
         else:
-            return np.random.lognormal(self.green_mu, self.green_sigma)
+            return np.random.lognormal(self.yellow_mu, self.yellow_sigma)
 
     # -------------------------------------------
-    # Add new arrivals
+    # Adding new arrivals
     # -------------------------------------------
     def _add_new_arrivals(self):
-        new_red = np.random.poisson(lam=1)
-        new_yellow = np.random.poisson(lam=2)
-        new_green = np.random.poisson(lam=3)
+        new_red = np.random.poisson(lam=self.arrival_lam["red"])
+        new_yellow = np.random.poisson(lam=self.arrival_lam["yellow"])
 
         self.red_queue.extend([0] * new_red)
         self.yellow_queue.extend([0] * new_yellow)
-        self.green_queue.extend([0] * new_green)
 
-        # Increase waiting time of all existing patients
+        # Incrementing waiting time for all patients
         self.red_queue = [w + 1 for w in self.red_queue]
         self.yellow_queue = [w + 1 for w in self.yellow_queue]
-        self.green_queue = [w + 1 for w in self.green_queue]
 
     # -------------------------------------------
     # Step function
@@ -117,7 +101,7 @@ class HospitalEnv(gym.Env):
     def step(self, action):
         self.current_step += 1
 
-        # Wait until at least one doctor is free
+        # Ensure at least one doctor is free
         free_doctors = np.where(self.doctor_timers == 0)[0]
         if len(free_doctors) == 0:
             min_timer = min([t for t in self.doctor_timers if t > 0])
@@ -126,49 +110,47 @@ class HospitalEnv(gym.Env):
 
         doctor = free_doctors[0]
 
-        # Map action to queue
-        queue_map = {0: ("red", self.red_queue),
-                     1: ("yellow", self.yellow_queue),
-                     2: ("green", self.green_queue)}
+        # Mapping action to queue
+        queue_map = {0: ("red", self.red_queue), 1: ("yellow", self.yellow_queue)}
         cat_name, queue = queue_map[action]
 
-        # If queue empty → 0 reward
+        # ------------------------------
+        # Penalty if queue is empty
+        # ------------------------------
         if len(queue) == 0:
-            reward = 0
-        else:
-            wait_time = queue.pop(0)
-            dt = self._sample_service(action)
-            self.doctor_timers[doctor] = dt
+            penalty = -20
+            self._add_new_arrivals()
+            truncated = self.current_step >= self.max_steps
+            return self._get_obs(), penalty, False, truncated, {"message": f"Selected empty {cat_name} queue"}
 
-            # Advance other doctors
-            for i in range(self.num_doctors):
-                if i != doctor:
-                    self.doctor_timers[i] = max(0, self.doctor_timers[i] - dt)
+        # ------------------------------
+        # Normal service
+        # ------------------------------
+        wait_time = queue.pop(0)
+        dt = self._sample_service(action)
+        self.doctor_timers[doctor] = dt
 
-            # Reward calculation
-            reward_map = {"red": 40, "yellow": 20, "green": 5}
-            reward = reward_map[cat_name] + 1
+        # Advancing other doctors
+        for i in range(self.num_doctors):
+            if i != doctor:
+                self.doctor_timers[i] = max(0, self.doctor_timers[i] - dt)
 
-            # Dynamic bonus depending on category and threshold
-            threshold_times = {"red": 10, "yellow": 30, "green": 60}
-            reward_bonus = {"red": 40, "yellow": 30, "green": 10}
-            if wait_time <= threshold_times[cat_name]:
-                reward += reward_bonus[cat_name]
+        # Reward calculation
+        reward_map = {"red": 40, "yellow": 30}
+        reward = reward_map[cat_name] + 1
 
-            # Save last served wait time for this category
-            self.last_served_wait_times[cat_name] = wait_time
+        # Bonus for serving quickly
+        threshold_times = {"red": 15, "yellow": 30}
+        reward_bonus = {"red": 35, "yellow": 30}
+        if wait_time <= threshold_times[cat_name]:
+            reward += reward_bonus[cat_name]
 
-        # GREEN patient reward for recent service (fairness)
-        self.last_5_actions.append(action)
-        if len(self.last_5_actions) > 5:
-            self.last_5_actions.pop(0)
-        if 2 in self.last_5_actions:
-            reward += 15
+        # Saving last served wait time
+        self.last_served_wait_times[cat_name] = wait_time
 
-        # Add new arrivals
+        # Adding new arrivals
         self._add_new_arrivals()
 
-        # Truncated if max steps reached
+        # Episode truncation
         truncated = self.current_step >= self.max_steps
-
         return self._get_obs(), reward, False, truncated, {}

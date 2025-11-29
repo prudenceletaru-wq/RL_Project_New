@@ -1,9 +1,9 @@
 # RL Hospital Patient Triage
 
 ## Project Description
-This project implements a **Reinforcement Learning (RL) agent** to optimize patient triage in a hospital environment.  
-The agent learns to assign doctors to patients of different priority levels (Red, Yellow, Green) to **maximize overall efficiency and minimize waiting times**.  
-The project includes training, inference, and deployment via a **FastAPI endpoint**.
+This project implements a Reinforcement Learning (RL) agent to optimize patient scheduling in a hospital environment.  
+The agent learns to assign doctors to patients of different priority levels (Red and Yellow) to maximize overall efficiency and minimize waiting times.  
+The project includes training, inference, and deployment via a FastAPI endpoint.
 
 ---
 
@@ -20,7 +20,7 @@ RL_Hospital_Project/
 ├── training/ # RL training scripts
 │ └── train_dqn.py
 │
-├── deployment/ # API / Inference code
+├── API / # API Inference code
 │ └── serve_api.py
 │
 ├── requirements.txt # Python dependencies with versions
@@ -55,7 +55,6 @@ Run the training script to train the DQN agent:
 
 python training/train_dqn.py
 
-
 The trained model will be saved in the models/ folder.
 
 Running the API
@@ -75,7 +74,7 @@ Example Request:
 
 curl -X POST "http://127.0.0.1:8000/predict" \
 -H "Content-Type: application/json" \
--d '{"state": [3, 10, 0, 0, 3, 9, 0, 0, 0, 0]}'
+-d '{"state": [3, 10, 0, 3, 9, 0, 0, 0]}'
 
 
 Response:
@@ -91,23 +90,6 @@ action values:
 
 1 → Yellow patient
 
-2 → Green patient
-
-Testing Q-values interactively
-
-You can also check what the RL agent predicts for any state:
-
-import numpy as np
-import torch
-from stable_baselines3 import DQN
-
-model = DQN.load(r"C:\Users\Prudence Letaru\Desktop\RL_Project_New\models\dqn_hospital_sb3")
-obs = np.array([3,10,0,0,3,9,0,0,0,0], dtype=np.float32)
-obs_tensor = torch.tensor(obs).unsqueeze(0)
-
-q_values = model.q_net(obs_tensor)
-print("Q-values for [Red, Yellow, Green]:", q_values.detach().numpy())
-print("DQN chooses action:", ["Red","Yellow","Green"][q_values.argmax().item()])
 
 Dependencies
 

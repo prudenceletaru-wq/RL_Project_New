@@ -15,13 +15,13 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 # ------------------------------
-# Set seeds for reproducibility
+# Setting seeds for reproducibility
 # ------------------------------
 SEED = 42
 np.random.seed(SEED)
 torch.manual_seed(SEED)
 
-# --- Create wrapped environment ---
+# --- Creating wrapped environment ---
 def make_env():
     env = HospitalEnv()
     env.reset(seed=SEED)   # seed the environment here
@@ -30,7 +30,7 @@ def make_env():
 
 env = DummyVecEnv([make_env])
 
-# --- Create DQN agent ---
+# --- Creating DQN agent ---
 model = DQN(
     "MlpPolicy",       # Fully connected NN
     env,
@@ -46,10 +46,10 @@ model = DQN(
     seed=SEED                  # seed SB3 agent
 )
 
-# --- Train agent ---
+# --- Training agent ---
 model.learn(total_timesteps=50000)
 
-# --- Save trained model ---
+# --- Saving trained model ---
 model.save("../models/dqn_hospital_sb3")
 print("Model saved to models/dqn_hospital_sb3.zip")
 
