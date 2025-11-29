@@ -3,10 +3,9 @@
 ## Project Description
 This project implements a Reinforcement Learning (RL) agent to optimize patient scheduling in a hospital environment.  
 The agent learns to assign doctors to patients of different priority levels (Red and Yellow) to maximize overall efficiency and minimize waiting times.  
-The project includes training, inference, and deployment via a FastAPI endpoint.
+The project includes **training**, **inference**, and **deployment** via a FastAPI endpoint.
 
 ---
-
 
 ## Project Structure
 
@@ -16,82 +15,104 @@ RL_Project_New/   <-- root directory
 │   └── hospital_env.py
 │
 ├── models/        # Saved RL model
-│   └── dqn_hospital_sb3
+│   └── dqn_hospital_sb3.zip
 │
 ├── training/      # RL training and evaluation scripts
 │   └── train_dqn.py
 │
-├── API/           # API Inference code
+├── API/           # API inference code
 │   └── serve_api.py
 │
 ├── requirements.txt  # Python dependencies with versions
 ├── Dockerfile        # Dockerfile for building container
 └── README.md         # Project description
 
+---
 
 ## Installation
 
 1. **Clone the repository**:
 
-```bash
-git clone <your-repo-url>
-cd RL_Hospital_Project
+git clone https://github.com/prudenceletaru-wq/RL_Project_New
+cd RL_Project_New
 
-
-Create and activate a Conda environment:
+* Create and activate a Conda environment *:
 
 conda create -n rl_env python=3.12
 conda activate rl_env
 
-
-Install required packages:
-
+* Install required packages *:
 pip install -r requirements.txt
 
-Usage
-Training the RL Agent
+* Training the RL Agent *
 
 Run the training script to train the DQN agent:
-
 python training/train_dqn.py
-
 The trained model will be saved in the models/ folder.
 
-Running the API
+* Running the API Locally *
 
 Start the FastAPI server to serve the trained model:
-
-python deployment/serve_api.py
-
-
+python API/serve_api.py
 Default URL: http://127.0.0.1:8000
-
 API endpoint: /predict
+Input: Dictionary of current hospital state
 
-Input: JSON observation of current hospital state
+* Example Request (Python)*:
 
-Example Request:
+import requests
 
-curl -X POST "http://127.0.0.1:8000/predict" \
--H "Content-Type: application/json" \
--d '{"state": [3, 10, 0, 3, 9, 0, 0, 0]}'
-
-
-Response:
-
-{
-  "action": 1
+state_dict = {
+    "free_doctors": 2,
+    "longest_wait_red": 8,
+    "longest_wait_yellow": 12,
+    "red_queue_length": 4,
+    "yellow_queue_length": 5,
+    "doctor1_busy_time": 0,
+    "doctor2_busy_time": 4,
+    "doctor3_busy_time": 2
 }
 
+response = requests.post(
+    "http://127.0.0.1:8000/predict",
+    json={"state": state_dict}
+)
 
-action values:
+print(response.json())
 
-0 → Red patient
+Example Response:
 
-1 → Yellow patient
+{
+  "action": 0,
+  "meaning": "serve_red"
+}
 
+Action values:
+0 → Serve Red patient
+1 → Serve Yellow patient
 
-Dependencies
+* Web-based Testing *
+
+Deployed on Render. Open the interactive API docs:
+
+https://rl-hospital-api.onrender.com/docs
+
+Click on /predict
+Click Try it out
+Enter a JSON dictionary for state (like the example above)
+Click Execute to see the predicted action.
+
+* Deployment *
+
+This project uses Docker for deployment.
+Dockerfile is included in the root directory.
+To deploy on Render:
+Push the repo to GitHub
+Connect the repo to Render
+Configure as a Docker Web Service
+Render automatically builds and deploys the container
+
+* Dependencies *
 
 Key libraries (also listed in requirements.txt):
 
