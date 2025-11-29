@@ -5,10 +5,8 @@ This project implements a Reinforcement Learning (RL) agent to optimize patient 
 The agent learns to assign doctors to patients of different priority levels (Red and Yellow) to maximize overall efficiency and minimize waiting times.  
 The project includes **training**, **inference**, and **deployment** via a FastAPI endpoint.
 
----
-
 ## Project Structure
-
+```
 RL_Project_New/   <-- root directory
 │
 ├── env/           # Custom environment code
@@ -27,7 +25,7 @@ RL_Project_New/   <-- root directory
 ├── Dockerfile        # Dockerfile for building container
 └── README.md         # Project description
 
----
+```
 
 ## Installation
 
@@ -99,7 +97,21 @@ https://rl-hospital-api.onrender.com/docs
 
 Click on /predict
 Click Try it out
-Enter a JSON dictionary for state (like the example above)
+Enter a JSON dictionary for state (like the example below):
+
+{
+  "state": {
+    "free_doctors": 2,
+    "longest_wait_red": 8,
+    "longest_wait_yellow": 12,
+    "red_queue_length": 4,
+    "yellow_queue_length": 5,
+    "doctor1_busy_time": 0,
+    "doctor2_busy_time": 4,
+    "doctor3_busy_time": 2
+  }
+}
+
 Click Execute to see the predicted action.
 
 * Deployment *
