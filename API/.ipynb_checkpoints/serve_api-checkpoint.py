@@ -4,8 +4,16 @@ import numpy as np
 import json
 import os
 import time
+import sys
+
+# -------------------------------
+# Add project root to sys.path
+# -------------------------------
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(ROOT_DIR)
+
+from env.hospital_env import HospitalEnv
 from stable_baselines3 import DQN
-from hospital_env import HospitalEnv
 
 # -------------------------------
 # FastAPI app
@@ -31,13 +39,13 @@ class RequestBody(BaseModel):
 # -------------------------------
 # Load trained RL model
 # -------------------------------
-MODEL_PATH = "models/dqn_hospital_sb3"
+MODEL_PATH = os.path.join(ROOT_DIR, "models/dqn_hospital_sb3")
 model = DQN.load(MODEL_PATH)
 
 # -------------------------------
 # Logging location for monitoring
 # -------------------------------
-LOG_FILE = "api_logs.json"
+LOG_FILE = os.path.join(ROOT_DIR, "api_logs.json")
 
 # -------------------------------
 # Convert API state to environment observation
@@ -66,14 +74,14 @@ def predict(request: RequestBody):
     action = int(action)
 
     # Compute reward and wait time using environment logic
-    # Here we simulate an environment step
     env = HospitalEnv()
-    # Set environment state manually
-    env.doctor_timers = np.array([request.state.doctor1_busy_time,
-                                  request.state.doctor2_busy_time,
-                                  request.state.doctor3_busy_time], dtype=np.float32)
-    env.red_queue = [request.state.longest_wait_red]*request.state.red_queue_length
-    env.yellow_queue = [request.state.longest_wait_yellow]*request.state.yellow_queue_length
+    env.doctor_timers = np.array([
+        request.state.doctor1_busy_time,
+        request.state.doctor2_busy_time,
+        request.state.doctor3_busy_time
+    ], dtype=np.float32)
+    env.red_queue = [request.state.longest_wait_red] * request.state.red_queue_length
+    env.yellow_queue = [request.state.longest_wait_yellow] * request.state.yellow_queue_length
 
     _, reward, _, _, _ = env.step(action)
     wait_time = env.last_served_wait_times["red"] if action == 0 else env.last_served_wait_times["yellow"]
