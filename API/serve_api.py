@@ -1,58 +1,96 @@
-from stable_baselines3 import DQN
-import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel
-from pathlib import Path
-from typing import Dict
+import numpy as np
+import json
+import os
+import time
+from stable_baselines3 import DQN
+from hospital_env import HospitalEnv
 
-app = FastAPI()
+# -------------------------------
+# FastAPI app
+# -------------------------------
+app = FastAPI(title="Hospital RL Agent API")
 
-# ---- Loading the Model ----
-model_path = Path(__file__).resolve().parent.parent / "models" / "dqn_hospital_sb3.zip"
-model = DQN.load(str(model_path))
+# -------------------------------
+# Pydantic models for input
+# -------------------------------
+class State(BaseModel):
+    free_doctors: int
+    longest_wait_red: float
+    longest_wait_yellow: float
+    red_queue_length: int
+    yellow_queue_length: int
+    doctor1_busy_time: float
+    doctor2_busy_time: float
+    doctor3_busy_time: float
 
-# Mapping RL action numbers to readable names
-action_map = {
-    0: "serve_red",
-    1: "serve_yellow",
-}
+class RequestBody(BaseModel):
+    state: State
 
-# ---- Input Schema ----
-class Observation(BaseModel):
-    state: Dict[str, int]  # dictionary with feature names
+# -------------------------------
+# Load trained RL model
+# -------------------------------
+MODEL_PATH = "models/dqn_hospital_sb3"
+model = DQN.load(MODEL_PATH)
 
-# ---- Prediction Endpoint ----
+# -------------------------------
+# Logging location for monitoring
+# -------------------------------
+LOG_FILE = "api_logs.json"
+
+# -------------------------------
+# Convert API state to environment observation
+# -------------------------------
+def state_to_obs(state: State):
+    return np.array([
+        state.free_doctors,
+        state.longest_wait_red,
+        state.longest_wait_yellow,
+        state.red_queue_length,
+        state.yellow_queue_length,
+        state.doctor1_busy_time,
+        state.doctor2_busy_time,
+        state.doctor3_busy_time
+    ], dtype=np.float32)
+
+# -------------------------------
+# API endpoint
+# -------------------------------
 @app.post("/predict")
-def predict_action(data: Observation):
-    # Define the correct order your RL model expects
-    ordered_keys = [
-        "free_doctors",
-        "longest_wait_red",
-        "longest_wait_yellow",
-        "red_queue_length",
-        "yellow_queue_length",
-        "doctor1_busy_time",
-        "doctor2_busy_time",
-        "doctor3_busy_time"
-    ]
+def predict(request: RequestBody):
+    obs = state_to_obs(request.state)
 
-    # Convert dictionary to list in correct order
-    try:
-        obs = np.array([data.state[key] for key in ordered_keys], dtype=float)
-    except KeyError as e:
-        return {
-            "error": f"Missing required key in state: {e}"
-        }
-
-    # Checking if all queues are empty
-    if obs[3] == 0 and obs[4] == 0:
-        return {
-            "action": None,
-            "meaning": "No patients in queues",
-            "message": "API detected empty queues, no action taken"
-        }
-
-    # Otherwise, predicting action with RL model
+    # Predict action
     action, _ = model.predict(obs, deterministic=True)
-    readable = action_map[int(action)]
-    return {"action": int(action), "meaning": readable}
+    action = int(action)
+
+    # Compute reward and wait time using environment logic
+    # Here we simulate an environment step
+    env = HospitalEnv()
+    # Set environment state manually
+    env.doctor_timers = np.array([request.state.doctor1_busy_time,
+                                  request.state.doctor2_busy_time,
+                                  request.state.doctor3_busy_time], dtype=np.float32)
+    env.red_queue = [request.state.longest_wait_red]*request.state.red_queue_length
+    env.yellow_queue = [request.state.longest_wait_yellow]*request.state.yellow_queue_length
+
+    _, reward, _, _, _ = env.step(action)
+    wait_time = env.last_served_wait_times["red"] if action == 0 else env.last_served_wait_times["yellow"]
+
+    # Log to file for monitoring
+    log_entry = {
+        "timestamp": time.time(),
+        "state": request.state.dict(),
+        "action": "RED" if action == 0 else "YELLOW",
+        "reward": reward,
+        "wait_time": wait_time
+    }
+    with open(LOG_FILE, "a") as f:
+        f.write(json.dumps(log_entry) + "\n")
+
+    return {
+        "action": "RED" if action == 0 else "YELLOW",
+        "reward": reward,
+        "wait_time": wait_time
+    }
