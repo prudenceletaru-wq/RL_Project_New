@@ -1,17 +1,19 @@
-Optimizing Patient Scheduling Using Reinforcement Learning: Prioritizing Urgent Cases
+# Optimizing Patient Scheduling Using Reinforcement Learning: Prioritizing Urgent Cases
 
-Project Description
+# Project Description
 
 This project implements a Reinforcement Learning (RL) agent to optimize patient scheduling in a hospital environment.
 The agent learns to assign doctors to patients of different priority levels, Red (urgent) and Yellow (non-urgent), prioritizing red patients while maximizing overall efficiency and minimizing waiting times.
 
-The project includes:
+* The project includes:
 
 RL training using a DQN agent
 
 Inference via a FastAPI endpoint
 
 Real-time monitoring to track model performance, action distribution, and waiting time trends
+
+* Project Structure
 
 ```
 RL_Project_New/   <-- root directory
@@ -42,21 +44,21 @@ RL_Project_New/   <-- root directory
 └── Dockerfile               # Docker setup (if applicable)
 
 ```
-Installation
+# Installation
 
-Clone the repository:
+* Clone the repository:
 
 git clone https://github.com/prudenceletaru-wq/RL_Project_New
 cd RL_Project_New
 
 
-Create and activate a Conda environment:
+* Create and activate a Conda environment:
 
 conda create -n rl_env python=3.12
 conda activate rl_env
 
 
-Install required packages:
+* Install required packages:
 
 pip install -r requirements.txt
 
@@ -66,15 +68,13 @@ Run the training script to train the DQN agent:
 
 python training/train_dqn.py
 
-
 The trained model will be saved in the models/ folder.
 
-Running the API Locally
+* Running the API Locally
 
 Start the FastAPI server to serve the trained model:
 
 python API/serve_api.py
-
 
 Default URL: http://127.0.0.1:8000/docs
 
@@ -99,7 +99,7 @@ example:
 
 
 
-Example Request (Python):
+* Example Request (Python):
 
 import requests
 
@@ -122,7 +122,7 @@ response = requests.post(
 print(response.json())
 
 
-Example Response:
+* Example Response:
 
 {
   "action": "Serve Red",
@@ -132,13 +132,13 @@ Example Response:
 }
 
 
-Action meanings:
+* Action meanings:
 
 action	meaning
 "Serve Red"	Serve a Red (urgent) patient
 "Serve Yellow"	Serve a Yellow (non-urgent) patient
 
-Web-based Testing
+* Web-based Testing
 
 Deployed on Render:
 
@@ -167,7 +167,7 @@ Enter a JSON dictionary for state (like the example below)
 
 Click Execute to see the predicted action
 
-Example Request (Python) Using the Render URL instead of localhost
+* Example Request (Python) Using the Render URL instead of localhost
 
 import requests
 
@@ -189,7 +189,7 @@ response = requests.post(url, json={"state": state_dict})
 print(response.json())
 
 
-Monitoring
+* Monitoring
 
 The system includes real-time monitoring via monitoring.py:
 
@@ -216,7 +216,7 @@ Running monitoring:
 python monitoring.py
 
 
-Deployment
+* Deployment
 
 This project uses Docker for deployment.
 
@@ -230,7 +230,7 @@ Configure as a Docker Web Service
 
 Render automatically builds and deploys the container
 
-Dependencies
+* Dependencies
 
 Key libraries (also listed in requirements.txt):
 
@@ -252,4 +252,6 @@ uvicorn
 
 scipy
 
-Presentation/ folder: Contains the final project slides (PDF) summarizing the project workflow, RL model, evaluation results, and deployment details.
+* Presentation/ folder
+
+Contains the final project slides (PDF) summarizing the project workflow, RL model, evaluation results, and deployment details.
