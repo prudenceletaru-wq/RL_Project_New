@@ -47,6 +47,11 @@ model = DQN.load(MODEL_PATH)
 # -------------------------------
 LOG_FILE = os.path.join(ROOT_DIR, "api_logs.json")
 
+# Ensure log file exists
+if not os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "w") as f:
+        f.write("")
+
 # -------------------------------
 # Convert API state to environment observation
 # -------------------------------
@@ -61,6 +66,11 @@ def state_to_obs(state: State):
         state.doctor2_busy_time,
         state.doctor3_busy_time
     ], dtype=np.float32)
+
+# -------------------------------
+# Map action numbers to descriptive strings
+# -------------------------------
+ACTION_MAP = {0: "Serve Red", 1: "Serve Yellow"}
 
 # -------------------------------
 # API endpoint
@@ -81,7 +91,7 @@ def predict(request: RequestBody):
     if computed_free_doctors != state.free_doctors:
         return {
             "error": f"Inconsistent state: free_doctors={state.free_doctors} "
-                     f"Does not match busy times (computed_free_doctors={computed_free_doctors})"
+                     f"does not match busy times (computed_free_doctors={computed_free_doctors})"
         }
 
     # Pre-check: Are queues empty?
@@ -122,7 +132,7 @@ def predict(request: RequestBody):
         "timestamp": time.time(),
         "state": state.dict(),
         "computed_free_doctors": computed_free_doctors,
-        "action": "RED" if action == 0 else "YELLOW",
+        "action": ACTION_MAP[action],
         "reward": reward,
         "wait_time": wait_time
     }
@@ -130,7 +140,7 @@ def predict(request: RequestBody):
         f.write(json.dumps(log_entry) + "\n")
 
     return {
-        "action": "RED" if action == 0 else "YELLOW",
+        "action": ACTION_MAP[action],
         "reward": reward,
         "wait_time": wait_time,
         "free_doctors": state.free_doctors

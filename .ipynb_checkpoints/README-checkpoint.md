@@ -85,7 +85,7 @@ state_dict = {
     "red_queue_length": 4,
     "yellow_queue_length": 5,
     "doctor1_busy_time": 0,
-    "doctor2_busy_time": 4,
+    "doctor2_busy_time": 0,
     "doctor3_busy_time": 2
 }
 
@@ -132,7 +132,7 @@ Enter a JSON dictionary for state (like the example below):
     "red_queue_length": 4,
     "yellow_queue_length": 5,
     "doctor1_busy_time": 0,
-    "doctor2_busy_time": 4,
+    "doctor2_busy_time": 0,
     "doctor3_busy_time": 2
   }
 }
