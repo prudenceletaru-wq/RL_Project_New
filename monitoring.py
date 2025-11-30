@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 # -------------------------------
-# Load training metrics
+# Loading training metrics
 # -------------------------------
 METRICS_FILE = "training_metrics.json"
 if os.path.exists(METRICS_FILE):
@@ -75,7 +75,7 @@ def check_wait_drift(cat):
         logging.warning(f"DATA DRIFT DETECTED in {cat.upper()} wait times (p={p:.4f})")
 
 # -------------------------------
-# Monitor API logs in real time
+# Monitoring API logs in real time
 # -------------------------------
 LOG_FILE = "api_logs.json"
 processed_lines = 0
@@ -103,7 +103,7 @@ while True:
 
         processed_lines += len(new_lines)
 
-        # Optional: print periodic summary
+        # Printing periodic summary
         if len(recent_rewards) > 0 and processed_lines % 20 == 0:
             print(f"[SUMMARY] Mean reward: {np.mean(recent_rewards):.2f}, "
                   f"Action distribution: RED {recent_actions.count(0)}, YELLOW {recent_actions.count(1)}, "

@@ -35,4 +35,5 @@ webcolors==25.10.0
 wheel==0.45.1
 fastapi==0.121.3
 scipy==1.16.3
+requests==2.32.2
 

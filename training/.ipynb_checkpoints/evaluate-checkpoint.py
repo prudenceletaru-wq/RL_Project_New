@@ -103,7 +103,7 @@ for cat, stats in queue_stats.items():
     print(f"  {cat.capitalize()}: avg={stats['avg']:.2f}, max={stats['max']}")
 
 # -------------------------------
-# Save training metrics to JSON
+# Saving training metrics to JSON
 # -------------------------------
 training_metrics = {
     "train_action_dist": [red_pct, yellow_pct],

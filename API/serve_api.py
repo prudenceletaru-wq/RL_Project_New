@@ -7,7 +7,7 @@ import time
 import sys
 
 # -------------------------------
-# Add project root to sys.path
+# Adding project root to sys.path
 # -------------------------------
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(ROOT_DIR)
@@ -37,7 +37,7 @@ class RequestBody(BaseModel):
     state: State
 
 # -------------------------------
-# Load trained RL model
+# Loading trained RL model
 # -------------------------------
 MODEL_PATH = os.path.join(ROOT_DIR, "models/dqn_hospital_sb3")
 model = DQN.load(MODEL_PATH)
@@ -47,13 +47,13 @@ model = DQN.load(MODEL_PATH)
 # -------------------------------
 LOG_FILE = os.path.join(ROOT_DIR, "api_logs.json")
 
-# Ensure log file exists
+# Ensuring log file exists
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w") as f:
         f.write("")
 
 # -------------------------------
-# Convert API state to environment observation
+# Converting API state to environment observation
 # -------------------------------
 def state_to_obs(state: State):
     return np.array([
@@ -68,7 +68,7 @@ def state_to_obs(state: State):
     ], dtype=np.float32)
 
 # -------------------------------
-# Map action numbers to descriptive strings
+# Mapping action numbers to descriptive strings
 # -------------------------------
 ACTION_MAP = {0: "Serve Red", 1: "Serve Yellow"}
 
@@ -87,29 +87,29 @@ def predict(request: RequestBody):
     ]
     computed_free_doctors = sum(1 for t in doctor_busy_times if t == 0)
 
-    # Validate input consistency
+    # Validating input consistency
     if computed_free_doctors != state.free_doctors:
         return {
             "error": f"Inconsistent state: free_doctors={state.free_doctors} "
                      f"does not match busy times (computed_free_doctors={computed_free_doctors})"
         }
 
-    # Pre-check: Are queues empty?
+    # Pre-checking if queues are empty
     if state.red_queue_length == 0 and state.yellow_queue_length == 0:
         return {"message": "All queues are empty. No patients to attend."}
 
-    # Pre-check: Are all doctors busy?
+    # Pre-checking if all doctors are busy
     if state.free_doctors == 0:
         return {"message": "All doctors are busy. Please wait."}
 
-    # Convert state to observation for the model
+    # Converting state to observation for the model
     obs = state_to_obs(state)
 
-    # Predict action
+    # Predicting action
     action, _ = model.predict(obs, deterministic=True)
     action = int(action)
 
-    # Validate action against queue lengths
+    # Validating action against queue lengths
     if action == 0 and state.red_queue_length == 0:
         action = 1 if state.yellow_queue_length > 0 else None
     elif action == 1 and state.yellow_queue_length == 0:
@@ -118,7 +118,7 @@ def predict(request: RequestBody):
     if action is None:
         return {"message": "No patients in the chosen queue."}
 
-    # Compute reward and wait time using environment logic
+    # Computing reward and wait time using environment logic
     env = HospitalEnv()
     env.doctor_timers = np.array(doctor_busy_times, dtype=np.float32)
     env.red_queue = [state.longest_wait_red] * state.red_queue_length
@@ -127,7 +127,7 @@ def predict(request: RequestBody):
     _, reward, _, _, _ = env.step(action)
     wait_time = env.last_served_wait_times["red"] if action == 0 else env.last_served_wait_times["yellow"]
 
-    # Log to file for monitoring
+    # Logging to file for monitoring
     log_entry = {
         "timestamp": time.time(),
         "state": state.dict(),
