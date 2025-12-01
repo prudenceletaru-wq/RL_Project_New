@@ -21,20 +21,23 @@ from stable_baselines3 import DQN
 app = FastAPI(title="Hospital RL Agent API")
 
 # -------------------------------
-# Pydantic models for input
+# Pydantic Input Model with default values
 # -------------------------------
 class State(BaseModel):
-    free_doctors: int
-    longest_wait_red: float
-    longest_wait_yellow: float
-    red_queue_length: int
-    yellow_queue_length: int
-    doctor1_busy_time: float
-    doctor2_busy_time: float
-    doctor3_busy_time: float
+    free_doctors: int = 2
+    longest_wait_red: float = 3
+    longest_wait_yellow: float = 5           
+    red_queue_length: int = 2
+    yellow_queue_length: int = 5
+    doctor1_busy_time: float = 0
+    doctor2_busy_time: float = 0
+    doctor3_busy_time: float = 4
 
+# -------------------------------
+# Request body wrapper 
+# -------------------------------
 class RequestBody(BaseModel):
-    state: State
+    state: State = State()  # default State 
 
 # -------------------------------
 # Loading trained RL model
@@ -43,17 +46,16 @@ MODEL_PATH = os.path.join(ROOT_DIR, "models/dqn_hospital_sb3")
 model = DQN.load(MODEL_PATH)
 
 # -------------------------------
-# Logging location for monitoring
+# Logging location
 # -------------------------------
 LOG_FILE = os.path.join(ROOT_DIR, "api_logs.json")
 
-# Ensuring log file exists
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w") as f:
         f.write("")
 
 # -------------------------------
-# Converting API state to environment observation
+# Converting state to environment observation
 # -------------------------------
 def state_to_obs(state: State):
     return np.array([
@@ -68,18 +70,18 @@ def state_to_obs(state: State):
     ], dtype=np.float32)
 
 # -------------------------------
-# Mapping action numbers to descriptive strings
+# Action names
 # -------------------------------
 ACTION_MAP = {0: "Serve Red", 1: "Serve Yellow"}
 
 # -------------------------------
-# API endpoint
+# Endpoint (uses RequestBody wrapper)
 # -------------------------------
 @app.post("/predict")
 def predict(request: RequestBody):
     state = request.state
 
-    # Compute free doctors from busy times
+    # Computing free doctors from busy times
     doctor_busy_times = [
         state.doctor1_busy_time,
         state.doctor2_busy_time,
@@ -87,38 +89,38 @@ def predict(request: RequestBody):
     ]
     computed_free_doctors = sum(1 for t in doctor_busy_times if t == 0)
 
-    # Validating input consistency
+    # Checking consistency
     if computed_free_doctors != state.free_doctors:
         return {
             "error": f"Inconsistent state: free_doctors={state.free_doctors} "
-                     f"does not match busy times (computed_free_doctors={computed_free_doctors})"
+                     f"does not match busy times (computed={computed_free_doctors})"
         }
 
-    # Pre-checking if queues are empty
+    # No patients at all
     if state.red_queue_length == 0 and state.yellow_queue_length == 0:
         return {"message": "All queues are empty. No patients to attend."}
 
-    # Pre-checking if all doctors are busy
+    # All doctors busy
     if state.free_doctors == 0:
         return {"message": "All doctors are busy. Please wait."}
 
-    # Converting state to observation for the model
+    # Converting state to observation
     obs = state_to_obs(state)
 
     # Predicting action
     action, _ = model.predict(obs, deterministic=True)
     action = int(action)
 
-    # Validating action against queue lengths
+    # Fixing invalid actions
     if action == 0 and state.red_queue_length == 0:
         action = 1 if state.yellow_queue_length > 0 else None
     elif action == 1 and state.yellow_queue_length == 0:
         action = 0 if state.red_queue_length > 0 else None
 
     if action is None:
-        return {"message": "No patients in the chosen queue."}
+        return {"message": "No patients available to serve."}
 
-    # Computing reward and wait time using environment logic
+    # Computing reward using environment logic
     env = HospitalEnv()
     env.doctor_timers = np.array(doctor_busy_times, dtype=np.float32)
     env.red_queue = [state.longest_wait_red] * state.red_queue_length
@@ -127,7 +129,7 @@ def predict(request: RequestBody):
     _, reward, _, _, _ = env.step(action)
     wait_time = env.last_served_wait_times["red"] if action == 0 else env.last_served_wait_times["yellow"]
 
-    # Logging to file for monitoring
+    # Log action
     log_entry = {
         "timestamp": time.time(),
         "state": state.dict(),
@@ -139,6 +141,7 @@ def predict(request: RequestBody):
     with open(LOG_FILE, "a") as f:
         f.write(json.dumps(log_entry) + "\n")
 
+    # Response
     return {
         "action": ACTION_MAP[action],
         "reward": reward,
